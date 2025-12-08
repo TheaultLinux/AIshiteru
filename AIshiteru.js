@@ -13,7 +13,7 @@ async function fetchModels() {
             modelSelector.appendChild(option);
         });
         messageHistory.push({
-        content: "You have to talk in a romantic way, with heart, etc..., if i describe you in 1 word, you're LOVE",
+        content: "put heart in your messages",
         role: "system"
         });
     } catch (error) {
