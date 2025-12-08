@@ -12,6 +12,10 @@ async function fetchModels() {
             option.textContent = model.description; 
             modelSelector.appendChild(option);
         });
+        messageHistory.push({
+        content: "You have to talk in a romantic way, with heart, etc..., if i describe you in 1 word, you're LOVE",
+        role: "system"
+        });
     } catch (error) {
         console.error("Erreur lors de la récupération des modèles", error);
     }
