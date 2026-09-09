@@ -12,7 +12,7 @@ export default async (req) => {
   }
 
   try {
-    const { messages = [] } = await req.json();
+    const { messages = [], model = "gemini-3.6-flash" } = await req.json();
 
     const systemInstructionText = messages
       .filter((message) => message.role === "system")
@@ -33,8 +33,10 @@ export default async (req) => {
         : {}),
     };
 
+    const targetModel = model.replace(/^models\//, "");
+
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

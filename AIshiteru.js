@@ -4,6 +4,38 @@ let messageHistory = [
     content: "put heart in your messages",
   },
 ];
+let currentModel = "gemini-3.6-flash";
+
+async function fetchModels() {
+  const modelSelector = document.getElementById("model-selector");
+  if (!modelSelector) return;
+
+  try {
+    const response = await fetch("/api/gemini-models");
+    const data = await response.json();
+
+    if (data.models && data.models.length > 0) {
+      modelSelector.innerHTML = "";
+      data.models.forEach((m) => {
+        const option = document.createElement("option");
+        option.value = m.id;
+        option.textContent = m.name;
+        if (m.id.includes("flash")) {
+          option.selected = true;
+          currentModel = m.id;
+        }
+        modelSelector.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error("Erreur lors de la récupération des modèles :", error);
+  }
+}
+
+function changeModel() {
+  const modelSelector = document.getElementById("model-selector");
+  currentModel = modelSelector.value;
+}
 
 async function sendMessage() {
   const messageInput = document.getElementById("user-message");
@@ -25,10 +57,11 @@ async function sendMessage() {
   try {
     const response = await fetch("/api/gemini-chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ messages: messageHistory }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: messageHistory,
+        model: currentModel,
+      }),
     });
 
     const result = await response.json();
@@ -85,3 +118,11 @@ function checkSubmit(event) {
 }
 
 document.getElementById("user-message").addEventListener("keydown", checkSubmit);
+
+document.addEventListener("DOMContentLoaded", () => {
+  fetchModels();
+  const modelSelector = document.getElementById("model-selector");
+  if (modelSelector) {
+    modelSelector.addEventListener("change", changeModel);
+  }
+});
