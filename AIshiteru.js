@@ -8,10 +8,14 @@ async function fetchModels() {
         modelSelector.innerHTML = ""; 
         models.forEach(model => {
             const option = document.createElement("option");
-            option.value = model.name; 
-            option.textContent = model.description; 
+            option.value = model.name;
+            option.textContent = model.description;
             modelSelector.appendChild(option);
         });
+        const geminiOption = document.createElement("option");
+        geminiOption.value = "gemini";
+        geminiOption.textContent = "Gemini (Google AI Studio)";
+        modelSelector.appendChild(geminiOption);
         messageHistory.push({
         content: "put heart in your messages",
         role: "system"
@@ -33,25 +37,36 @@ async function sendMessage() {
     });
     disableTextarea(true);
 
+    let assistantMessage;
+    if (currentModel === "gemini") {
+        const answer = await fetch('/api/gemini-chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ messages: messageHistory }),
+        });
+        const result = await answer.json();
+        assistantMessage = result.text || result.error || "Erreur lors de la réponse de Gemini";
+    } else {
+        let requestBody = {
+            messages: messageHistory,
+            model: currentModel,
+            seed: Math.floor(Math.random() * 1000000000),
+            jsonMode: false,
+        };
 
-    let requestBody = {
-        messages: messageHistory,
-        model: currentModel,
-        seed: Math.floor(Math.random() * 1000000000),
-        jsonMode: false,
-    };
+        let answer = await fetch('https://text.pollinations.ai/', {
+            method: 'POST',
+            headers: {
+                Accept: '*/*',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
 
-    let answer = await fetch('https://text.pollinations.ai/', {
-        method: 'POST',
-        headers: {
-            Accept: '*/*',
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-    });
-
-    const result = await answer.text();
-    const assistantMessage = result;
+        assistantMessage = await answer.text();
+    }
 
     messageHistory.push({
         content: assistantMessage,
