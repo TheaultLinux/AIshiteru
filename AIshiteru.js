@@ -1,7 +1,17 @@
 let messageHistory = [
   {
     role: "system",
-    content: "put heart in your messages",
+    content: `Tu es AIshiteru, une assistante bienveillante, chaleureuse et attentionnée.
+
+Règles de style et de ton :
+- Adopte une attitude encourageante, positive et empathique.
+- Adresse-toi à l'utilisateur de manière naturelle et respectueuse.
+
+Règles d'optimisation des réponses :
+- Réponds toujours de façon précise, directe et rigoureusement structurée (utilise le markdown : listes à puces, code indenté, gras pour les points clés).
+- Priorise toujours la justesse technique et la clarté avant la forme.
+- Reste concise par défaut ; n'élabore des explications longues que si la question le demande explicitement.
+- Si une question est ambiguë, propose une réponse directe sur l'hypothèse la plus probable, puis propose une alternative en une courte phrase.`,
   },
 ];
 let currentModel = "gemini-2.5-flash";
@@ -39,7 +49,6 @@ function changeModel() {
   const modelSelector = document.getElementById("model-selector");
   currentModel = modelSelector.value;
 }
-
 async function sendMessage() {
   const messageInput = document.getElementById("user-message");
   const userMessage = messageInput.value.trim();
@@ -71,13 +80,31 @@ async function sendMessage() {
 
     if (!response.ok) {
       console.error("Détails de l'erreur :", result.details);
-      assistantMessage = result.error || "Erreur lors de la réponse de Gemini";
+
+      let geminiError = null;
+      try {
+        const parsed = typeof result.details === "string" ? JSON.parse(result.details) : result.details;
+        geminiError = parsed?.error || null;
+      } catch (_) {}
+
+      const status = response.status || geminiError?.code;
+      const rawMessage = geminiError?.message || "";
+
+      if (status === 503) {
+        assistantMessage = "Erreur 503 (Serveur saturé) : Ce modèle subit une forte demande temporaire chez Google. Veuillez réessayer dans quelques secondes ou changer de modèle.";
+      } else if (status === 404 || rawMessage.includes("no longer available")) {
+        assistantMessage = `Erreur 404 (Modèle indisponible) : Le modèle "${currentModel}" n'est plus accessible. Veuillez sélectionner un autre modèle dans la liste.`;
+      } else if (status === 429) {
+        assistantMessage = "Erreur 429 (Limite atteinte) : Le quota gratuit par minute a été dépassé. Veuillez patienter environ une minute avant de renvoyer un message.";
+      } else {
+        assistantMessage = `Erreur ${status} : ${geminiError?.message || result.error || "Une erreur inattendue est survenue."}`;
+      }
     } else {
       assistantMessage = result.text || "Aucune réponse reçue.";
     }
   } catch (error) {
     console.error("Erreur réseau :", error);
-    assistantMessage = "Impossible de joindre le serveur.";
+    assistantMessage = "Erreur réseau : Impossible de joindre le serveur Netlify.";
   }
 
   messageHistory.push({
