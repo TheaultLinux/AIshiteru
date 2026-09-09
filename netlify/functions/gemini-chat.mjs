@@ -29,7 +29,6 @@ export default async (req) => {
 
     const targetModel = model.replace(/^models\//, "");
 
-    // Vérification de la liste blanche
     if (!ALLOWED_MODELS.includes(targetModel)) {
       return Response.json(
         {
@@ -76,12 +75,30 @@ export default async (req) => {
     }
 
     const data = await geminiResponse.json();
-    const text =
-      data.candidates?.[0]?.content?.parts
-        ?.map((part) => part.text)
-        .join("") || "";
+    const parts = data.candidates?.[0]?.content?.parts || [];
 
-    return Response.json({ text });
+    let thought = "";
+    let text = "";
+
+    // 1. Cas où l'API renvoie des parts distinctes pour la réflexion (thought: true)
+    for (const part of parts) {
+      if (part.thought) {
+        thought += part.text;
+      } else if (part.text) {
+        text += part.text;
+      }
+    }
+
+    // 2. Cas où le modèle injecte les balises <thought> ou <think> dans le texte brut
+    if (!thought && text) {
+      const match = text.match(/<(thought|think)>([\s\S]*?)<\/\1>/i);
+      if (match) {
+        thought = match[2].trim();
+        text = text.replace(match[0], "").trim();
+      }
+    }
+
+    return Response.json({ text, thought });
   } catch (err) {
     return Response.json(
       { error: "Internal Server Error", details: err.message },

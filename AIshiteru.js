@@ -47,7 +47,7 @@ async function sendMessage() {
   if (!userMessage) return;
 
   messageInput.value = "";
-  appendMessage(userMessage, "user");
+  appendMessage({ text: userMessage }, "user");
 
   messageHistory.push({
     role: "user",
@@ -56,7 +56,8 @@ async function sendMessage() {
 
   disableTextarea(true);
 
-  let assistantMessage = "";
+  let assistantText = "";
+  let assistantThought = "";
   let isSuccess = false;
 
   try {
@@ -84,45 +85,62 @@ async function sendMessage() {
       const rawMessage = geminiError?.message || "";
 
       if (status === 503) {
-        assistantMessage = "Erreur 503 (Serveur saturé) : Ce modèle subit une forte demande temporaire chez Google. Veuillez réessayer dans quelques secondes ou changer de modèle.";
+        assistantText = "Erreur 503 (Serveur saturé) : Ce modèle subit une forte demande temporaire chez Google. Veuillez réessayer dans quelques secondes ou changer de modèle.";
       } else if (status === 404 || rawMessage.includes("no longer available")) {
-        assistantMessage = `Erreur 404 (Modèle indisponible) : Le modèle "${currentModel}" n'est plus accessible. Veuillez sélectionner un autre modèle dans la liste.`;
+        assistantText = `Erreur 404 (Modèle indisponible) : Le modèle "${currentModel}" n'est plus accessible. Veuillez sélectionner un autre modèle dans la liste.`;
       } else if (status === 429) {
-        assistantMessage = "Erreur 429 (Limite atteinte) : Le quota gratuit par minute a été dépassé. Veuillez patienter environ une minute avant de renvoyer un message.";
+        assistantText = "Erreur 429 (Limite atteinte) : Le quota gratuit par minute a été dépassé. Veuillez patienter environ une minute avant de renvoyer un message.";
       } else {
-        assistantMessage = `Erreur ${status} : ${geminiError?.message || result.error || "Une erreur inattendue est survenue."}`;
+        assistantText = `Erreur ${status} : ${geminiError?.message || result.error || "Une erreur inattendue est survenue."}`;
       }
     } else {
-      assistantMessage = result.text || "Aucune réponse reçue.";
+      assistantText = result.text || "Aucune réponse reçue.";
+      assistantThought = result.thought || "";
       isSuccess = true;
     }
   } catch (error) {
     console.error("Erreur réseau :", error);
-    assistantMessage = "Erreur réseau : Impossible de joindre le serveur Netlify.";
+    assistantText = "Erreur réseau : Impossible de joindre le serveur Netlify.";
   }
 
-  // Si l'API a réussi, on enregistre dans l'historique. Sinon, on retire la question non répondue.
   if (isSuccess) {
     messageHistory.push({
       role: "assistant",
-      content: assistantMessage,
+      content: assistantText,
     });
   } else {
     messageHistory.pop();
   }
 
-  appendMessage(assistantMessage, "assistant");
+  appendMessage({ text: assistantText, thought: assistantThought }, "assistant");
   disableTextarea(false);
 }
 
-function appendMessage(message, role) {
+function appendMessage(payload, role) {
   const chatBox = document.getElementById("chat-box");
   const messageElement = document.createElement("div");
   messageElement.classList.add("message", role);
 
-  const messageText = document.createElement("p");
+  // Si du raisonnement est présent, on insère le volet déroulant grisé
+  if (payload.thought) {
+    const details = document.createElement("details");
+    details.classList.add("thought-container");
+
+    const summary = document.createElement("summary");
+    summary.textContent = "Raisonnement du modèle";
+    details.appendChild(summary);
+
+    const thoughtBody = document.createElement("div");
+    thoughtBody.classList.add("thought-content");
+    thoughtBody.innerHTML = marked.parse(payload.thought);
+    details.appendChild(thoughtBody);
+
+    messageElement.appendChild(details);
+  }
+
+  const messageText = document.createElement("div");
   messageText.classList.add("message-text");
-  messageText.innerHTML = marked.parse(message);
+  messageText.innerHTML = marked.parse(payload.text || "");
   messageElement.appendChild(messageText);
 
   const time = new Date().toLocaleTimeString();
