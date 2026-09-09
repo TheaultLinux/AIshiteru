@@ -1,3 +1,16 @@
+const ALLOWED_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-3.1-flash-lite",
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
+  "gemma-4-31b",
+  "gemma-4-26b",
+];
+
 export default async (req) => {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
@@ -13,6 +26,18 @@ export default async (req) => {
 
   try {
     const { messages = [], model = "gemini-3.6-flash" } = await req.json();
+
+    const targetModel = model.replace(/^models\//, "");
+
+    // Vérification de la liste blanche
+    if (!ALLOWED_MODELS.includes(targetModel)) {
+      return Response.json(
+        {
+          error: `Modèle non autorisé. Choisissez parmi : ${ALLOWED_MODELS.join(", ")}`,
+        },
+        { status: 403 }
+      );
+    }
 
     const systemInstructionText = messages
       .filter((message) => message.role === "system")
@@ -32,8 +57,6 @@ export default async (req) => {
         ? { systemInstruction: { parts: [{ text: systemInstructionText }] } }
         : {}),
     };
-
-    const targetModel = model.replace(/^models\//, "");
 
     const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`,
