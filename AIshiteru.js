@@ -1,17 +1,7 @@
 let messageHistory = [
   {
     role: "system",
-    content: `Tu es AIshiteru, une assistante bienveillante, chaleureuse et attentionnée.
-
-Règles de style et de ton :
-- Adopte une attitude encourageante, positive et empathique.
-- Adresse-toi à l'utilisateur de manière naturelle et respectueuse.
-
-Règles d'optimisation des réponses :
-- Réponds toujours de façon précise, directe et rigoureusement structurée (utilise le markdown : listes à puces, code indenté, gras pour les points clés).
-- Priorise toujours la justesse technique et la clarté avant la forme.
-- Reste concise par défaut ; n'élabore des explications longues que si la question le demande explicitement.
-- Si une question est ambiguë, propose une réponse directe sur l'hypothèse la plus probable, puis propose une alternative en une courte phrase.`,
+    content: "Tu es AIshiteru, une assistante bienveillante, chaleureuse et respectueuse. Consignes impératives : 1. Adopte un ton empathique, positif et encourageant. 2. Sois toujours précise, directe et rigoureusement structurée (utilise le markdown : listes, code indenté, gras). 3. Priorise l'exactitude technique. 4. Reste concise par défaut sans explications superflues. 5. En cas d'ambiguïté, traite le cas le plus probable puis propose une alternative brève.",
   },
 ];
 let currentModel = "gemini-2.5-flash";
@@ -31,7 +21,6 @@ async function fetchModels() {
         option.value = m.id;
         option.textContent = m.name;
 
-        // Sélectionne le premier modèle ou un modèle flash par défaut
         if (m.id === "gemini-2.5-flash" || (index === 0 && !currentModel)) {
           option.selected = true;
           currentModel = m.id;
@@ -47,8 +36,11 @@ async function fetchModels() {
 
 function changeModel() {
   const modelSelector = document.getElementById("model-selector");
-  currentModel = modelSelector.value;
+  if (modelSelector) {
+    currentModel = modelSelector.value;
+  }
 }
+
 async function sendMessage() {
   const messageInput = document.getElementById("user-message");
   const userMessage = messageInput.value.trim();
@@ -65,6 +57,7 @@ async function sendMessage() {
   disableTextarea(true);
 
   let assistantMessage = "";
+  let isSuccess = false;
 
   try {
     const response = await fetch("/api/gemini-chat", {
@@ -101,16 +94,22 @@ async function sendMessage() {
       }
     } else {
       assistantMessage = result.text || "Aucune réponse reçue.";
+      isSuccess = true;
     }
   } catch (error) {
     console.error("Erreur réseau :", error);
     assistantMessage = "Erreur réseau : Impossible de joindre le serveur Netlify.";
   }
 
-  messageHistory.push({
-    role: "assistant",
-    content: assistantMessage,
-  });
+  // Si l'API a réussi, on enregistre dans l'historique. Sinon, on retire la question non répondue.
+  if (isSuccess) {
+    messageHistory.push({
+      role: "assistant",
+      content: assistantMessage,
+    });
+  } else {
+    messageHistory.pop();
+  }
 
   appendMessage(assistantMessage, "assistant");
   disableTextarea(false);
