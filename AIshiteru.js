@@ -4,7 +4,7 @@ let messageHistory = [
     content: "put heart in your messages",
   },
 ];
-let currentModel = "gemini-3.6-flash";
+let currentModel = "gemini-2.5-flash";
 
 async function fetchModels() {
   const modelSelector = document.getElementById("model-selector");
@@ -16,16 +16,19 @@ async function fetchModels() {
 
     if (data.models && data.models.length > 0) {
       modelSelector.innerHTML = "";
-      data.models.forEach((m) => {
+      data.models.forEach((m, index) => {
         const option = document.createElement("option");
         option.value = m.id;
         option.textContent = m.name;
-        if (m.id.includes("flash")) {
+
+        // Sélectionne le premier modèle ou un modèle flash par défaut
+        if (m.id === "gemini-2.5-flash" || (index === 0 && !currentModel)) {
           option.selected = true;
           currentModel = m.id;
         }
         modelSelector.appendChild(option);
       });
+      currentModel = modelSelector.value;
     }
   } catch (error) {
     console.error("Erreur lors de la récupération des modèles :", error);

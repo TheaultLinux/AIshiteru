@@ -1,3 +1,16 @@
+const ALLOWED_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-3.1-flash-lite",
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
+  "gemma-4-31b",
+  "gemma-4-26b",
+];
+
 export default async (req) => {
   if (req.method !== "GET") {
     return new Response("Method Not Allowed", { status: 405 });
@@ -18,22 +31,22 @@ export default async (req) => {
 
     if (!response.ok) {
       const details = await response.text();
-      return Response.json({ error: "Gemini API error", details }, { status: response.status });
+      return Response.json(
+        { error: "Gemini API error", details },
+        { status: response.status }
+      );
     }
 
     const data = await response.json();
 
-    // Filtre pour ne garder que les modèles de chat / génération de texte
+    // Filtre strict : uniquement les modèles autorisés par la liste blanche
     const models = (data.models || [])
-      .filter((model) =>
-        model.supportedGenerationMethods?.includes("generateContent")
-      )
       .map((model) => ({
-        // Nettoie l'ID pour avoir "gemini-..." sans le préfixe "models/"
-        id: model.name.replace("models/", ""),
-        name: model.displayName || model.name,
+        id: model.name.replace(/^models\//, ""),
+        name: model.displayName || model.name.replace(/^models\//, ""),
         description: model.description || "",
-      }));
+      }))
+      .filter((model) => ALLOWED_MODELS.includes(model.id));
 
     return Response.json({ models });
   } catch (err) {
