@@ -7,8 +7,8 @@ const ALLOWED_MODELS = [
   "gemini-3.6-flash",
   "gemini-3.5-flash-lite",
   "gemini-3.5-flash",
-  "gemma-4-31b",
-  "gemma-4-26b",
+  "gemma-4-31B",
+  "gemma-4-26B",
 ];
 
 export default async (req) => {
